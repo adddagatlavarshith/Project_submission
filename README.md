@@ -1,3 +1,4 @@
+
 Bulk Certificate Generator
 A small FastAPI service for generating certificates in bulk. You send it a list of recipients in one request, and it creates a PDF certificate for each of them in the background. You can check how the job is going and download the certificates when they're ready.
 
