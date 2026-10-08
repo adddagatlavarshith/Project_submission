@@ -1,0 +1,44 @@
+from collections.abc import Iterator
+
+from sqlalchemy import create_engine
+from sqlalchemy.engine import Engine
+from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
+
+from app.config import get_settings
+
+
+class Base(DeclarativeBase):
+    pass
+
+
+def _make_engine(url: str) -> Engine:
+    connect_args = {}
+    if url.startswith("sqlite"):
+        # SQLite connections are used from the request thread and the worker threads.
+        connect_args["check_same_thread"] = False
+    return create_engine(url, connect_args=connect_args)
+
+
+engine = _make_engine(get_settings().database_url)
+SessionLocal = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)
+
+
+def configure_database(url: str) -> None:
+    """Rebind the engine/session factory to a different database (used by tests)."""
+    global engine
+    engine = _make_engine(url)
+    SessionLocal.configure(bind=engine)
+
+
+def init_db() -> None:
+    from app import models  # noqa: F401  (register models on Base.metadata)
+
+    Base.metadata.create_all(bind=engine)
+
+
+def get_db() -> Iterator[Session]:
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
